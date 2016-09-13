@@ -48,11 +48,6 @@ def splitDataSet(dataSet, axis, value):
     return retDataSet
 
 
-if __name__ == '__main__':
-    myData, labels = createDataSet()
-    splitDataSet(myData, 0, 1)
-
-
 def chooseBestFeatureToSplit(dataSet):
     '''选择最好的数据集的划分方式'''
     numFeatures = len(dataSet[0]) - 1
@@ -82,3 +77,48 @@ def majorityCnt(classList):
         classCount[vote] += 1
     sortedClassCount = sorted(classCount.iteritems(), key=operator.itemgetter(1), reverse=True)
     return sortedClassCount
+
+
+def createTree(dataSet, labels):
+    '''
+    递归的思想构建决策树
+    '''
+    classList = [example[-1] for example in dataSet]
+    # 如果类别完全相同则停止划分
+    # list.count(var) , 计算var在list中出现的次数
+    if classList.count(classList[0]) == len(classList):
+        return classList[0]
+    # 如果遍历完所有特征值，返回出现次数最多的
+    if len(dataSet[0]) == 1:
+        return majorityCnt(classList)
+    bestFeat = chooseBestFeatureToSplit(dataSet)  # 返回最好特征的索引
+    bestFeatLabel = labels[bestFeat]
+    myTree = {bestFeatLabel: {}}
+    del (labels[bestFeat])
+    featValues = [example[bestFeat] for example in dataSet]
+    uniqueVals = set(featValues)
+    for value in uniqueVals:
+        subLabels = labels[:]
+        myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet, bestFeat, value), subLabels)
+    return myTree
+
+
+if __name__ == '__main__':
+    myData, labels = createDataSet()
+    # splitDataSet(myData, 0, 1)
+    myTree = createTree(myData, labels)
+    print myTree
+
+
+# 使用pickle模块存储决策树
+def storeTree(inputTree, filename):
+    import pickle
+    fw = open(filename, 'w')
+    pickle.dump(inputTree, fw)
+    fw.close()
+
+
+def grabTree(filename):
+    import pickle
+    fr = open(filename)
+    return pickle.load(fr)
