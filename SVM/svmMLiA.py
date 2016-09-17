@@ -108,18 +108,17 @@ def smoSimple(dataMatIn, classLabels, C, toler, maxIter):
 '''建立一个数据结构来保存所有的重要值，而这个过程可以通过一个对象来完成。'''
 class optStruct:
     def __init__(self, dataMatIn, classLabels, C, toler, kTup):  # Initialize the structure with the parameters
-        self.X = dataMatIn
-        self.labelMat = classLabels
-        self.C = C
-        self.tol = toler
-        self.m = shape(dataMatIn)[0]
-        self.alphas = mat(zeros((self.m, 1)))
-        self.b = 0
-        # eCache的第一列给出的是eCache是否有效的标志位，而第二列给出的是实际的E值。
-        self.eCache = mat(zeros((self.m, 2)))  # first column is valid flag
-        self.K = mat(zeros((self.m, self.m)))
-        # for i in range(self.m):
-        #     self.K[:, i] = kernelTrans(self.X, self.X[i, :], kTup)
+            self.X = dataMatIn
+            self.labelMat = classLabels
+            self.C = C
+            self.tol = toler
+            self.m = shape(dataMatIn)[0]
+            self.alphas = mat(zeros((self.m, 1)))
+            self.b = 0
+            self.eCache = mat(zeros((self.m, 2)))  # first column is valid flag
+            self.K = mat(zeros((self.m, self.m)))
+            for i in range(self.m):
+                self.K[:, i] = kernelTrans(self.X, self.X[i, :], kTup)
 
 
 def calcEk(oS, k):
@@ -216,6 +215,28 @@ def smoP(dataMatIn, classLabels, C, toler, maxIter,kTup=('lin', 0)):    #full Pl
         print "iteration number: %d" % iter
     return oS.b,oS.alphas
 
+
+def kernelTrans(X, A, kTup): #calc the kernel or transform data to a higher dimensional space
+    '''
+
+    :param X:
+    :param A:
+    :param kTup: 给出的是核函数的信息
+    :return:
+    '''
+    m,n = shape(X)
+    K = mat(zeros((m,1)))
+    if kTup[0]=='lin': K = X * A.T   #linear kernel
+    # 元组KTup的第一个参数是描述所用核函数类型的一个字符串
+    elif kTup[0]=='rbf':
+        for j in range(m):
+            deltaRow = X[j,:] - A
+            K[j] = deltaRow*deltaRow.T
+        K = exp(K/(-1*kTup[1]**2)) #divide in NumPy is element-wise not matrix like Matlab
+    else: raise NameError('Houston We Have a Problem -- \
+    That Kernel is not recognized')
+    return K
+
 def calcWs(alphas,dataArr,classLabels):
     X = mat(dataArr); labelMat = mat(classLabels).transpose()
     m,n = shape(X)
@@ -225,8 +246,35 @@ def calcWs(alphas,dataArr,classLabels):
     return w
 
 
+def testRbf(k1=1.3):
+    dataArr,labelArr = loadDataSet('testSetRBF.txt')
+    b,alphas = smoP(dataArr, labelArr, 200, 0.0001, 10000, ('rbf', k1)) #C=200 important
+    datMat=mat(dataArr); labelMat = mat(labelArr).transpose()
+    svInd=nonzero(alphas.A>0)[0]
+    sVs=datMat[svInd] #get matrix of only support vectors
+    labelSV = labelMat[svInd];
+    print "there are %d Support Vectors" % shape(sVs)[0]
+    m,n = shape(datMat)
+    errorCount = 0
+    for i in range(m):
+        kernelEval = kernelTrans(sVs,datMat[i,:],('rbf', k1))
+        predict=kernelEval.T * multiply(labelSV,alphas[svInd]) + b
+        if sign(predict)!=sign(labelArr[i]): errorCount += 1
+    print "the training error rate is: %f" % (float(errorCount)/m)
+    dataArr,labelArr = loadDataSet('testSetRBF2.txt')
+    errorCount = 0
+    datMat=mat(dataArr); labelMat = mat(labelArr).transpose()
+    m,n = shape(datMat)
+    for i in range(m):
+        kernelEval = kernelTrans(sVs,datMat[i,:],('rbf', k1))
+        predict=kernelEval.T * multiply(labelSV,alphas[svInd]) + b
+        if sign(predict)!=sign(labelArr[i]): errorCount += 1
+    print "the test error rate is: %f" % (float(errorCount)/m)
+
+
 if __name__ == '__main__':
-    dataArr, labelArr = loadDataSet('testSet.txt')
-    b,alphas = smoP(dataArr, labelArr, 0.6, 0.001, 40)
-    ws = calcWs(alphas, dataArr, labelArr)
-    print ws
+    testRbf(1.3)
+    # dataArr, labelArr = loadDataSet('testSet.txt')
+    # b,alphas = smoP(dataArr, labelArr, 0.6, 0.001, 40)
+    # ws = calcWs(alphas, dataArr, labelArr)
+    # print ws
