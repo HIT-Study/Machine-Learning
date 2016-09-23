@@ -102,12 +102,13 @@ def ascendTree(leafNode, prefixPath):
 
 def mineTree(inTree, headerTable, minSup, preFix, freqItemList):
     bigL = [v[0] for v in sorted(headerTable.items(), key=lambda p: p[1])]  # (sort header table)
+    # 程序首先对头指针表中的元素按照其出现的频率进行排序（默认顺序是从小到大）
     for basePat in bigL:  # start from bottom of header table
         newFreqSet = preFix.copy()
         newFreqSet.add(basePat)
         # print 'finalFrequent Item: ',newFreqSet    #append to set
         freqItemList.append(newFreqSet)
-        condPattBases = findPrefixPath(basePat, headerTable[basePat][1])
+        condPattBases = findPrefixPath(basePat, headerTable[basePat][1])  # 递归调用函数来创建条件基
         # print 'condPattBases :',basePat, condPattBases
         # 2. construct cond FP-tree from cond. pattern base
         myCondTree, myHead = createTree(condPattBases, minSup)
@@ -133,3 +134,6 @@ if __name__ == '__main__':
     print condPatsR
     freqItems = []
     mineTree(myFPTree, myHeaderTab, 3, set([]), freqItems)
+
+
+
